@@ -1,0 +1,10 @@
+# Gitignore for C projects.
+
+*.o
+*.dSYM
+*.a
+*.so
+*.dll
+
+3sm
+
