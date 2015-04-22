@@ -11,60 +11,60 @@
 #include <sys/wait.h>
 
 /* Time to wait between checking battery in microseconds. */
-#define CHECK_INTERVAL_USEC 4000000 /* 4 seconds */
+#define CHECK_INTERVAL_USEC	4000000 /* 4 seconds */
 
-/* Prefix of pm-action executables, found via `sudo which pm-suspend', or
- * similar. */
-#define PM_PREFIX "/usr/sbin/"
+/* Prefix of pm-action executables, found via `sudo which pm-suspend'
+ * and battery/system files and prefixes. */
+
+#define BAT_PREFIX	"/sys/class/power_supply/"
+#define CHARGE_FULL	BAT_PREFIX "BAT1/charge_full"
+#define CHARGE_NOW	BAT_PREFIX "BAT1/charge_now"
+#define ENERGY_FULL	BAT_PREFIX "BAT0/energy_full"
+#define ENERGY_NOW	BAT_PREFIX "BAT0/energy_now"
+#define VOLTAGE_NOW	BAT_PREFIX "BAT0/voltage_now"
+#define PM_PREFIX	"/usr/sbin/"
+#define STATE		"/sys/power/state"
 
 /* Support flags for use with pm-utils. */
 struct pm_support_t {
-	unsigned int suspend : 1;
-	unsigned int hibernate : 1;
+	unsigned int suspend        : 1;
+	unsigned int hibernate      : 1;
 	unsigned int suspend_hybrid : 1;
 } pm_support;
+
+/* Read an int from a file. */
+int freadint(const char *path, int *read)
+{
+	FILE *fd;
+	int status = 0;
+
+	if (access(path, R_OK) == 0) {
+		fd = fopen(path, "r");
+		status = fscanf(fd, "%d", read);
+		fclose(fd);
+	}
+
+	return status;
+}
 
 /* Get battery percentage. */
 float getbattery(void)
 {
-	FILE *fd;
 	int charge_now, charge_full, energy_now, energy_full, voltage_now;
 
-	if ((fd = fopen("/sys/class/power_supply/BAT0/energy_now", "r")) != NULL) {
-		fscanf(fd, "%d", &energy_now);
-		fclose(fd);
+	if (freadint(ENERGY_NOW, &energy_now)) {
 
-		fd = fopen("/sys/class/power_supply/BAT0/energy_full", "r");
-		if(fd == NULL) {
-			fprintf(stderr, "Error opening energy_full.\n");
-			return -1;
-		}
-		fscanf(fd, "%d", &energy_full);
-		fclose(fd);
-
-		fd = fopen("/sys/class/power_supply/BAT0/voltage_now", "r");
-		if(fd == NULL) {
-			fprintf(stderr, "Error opening voltage_now.\n");
-			return -1;
-		}
-		fscanf(fd, "%d", &voltage_now);
-		fclose(fd);
+		if (!(freadint(ENERGY_FULL, &energy_full)
+				&& freadint(VOLTAGE_NOW, &voltage_now)))
+			return -1.0;
 
 		return ((float)energy_now * 1000 / (float)voltage_now) * 100 /
 			((float)energy_full * 1000 / (float)voltage_now);
 
-	} else if ((fd = fopen("/sys/class/power_supply/BAT1/charge_now", "r"))
-			!= NULL) {
-		fscanf(fd, "%d", &charge_now);
-		fclose(fd);
+	} else if (freadint(CHARGE_NOW, &charge_now)) {
 
-		fd = fopen("/sys/class/power_supply/BAT1/charge_full", "r");
-		if(fd == NULL) {
-			fprintf(stderr, "Error opening charge_full.\n");
-			return -1;
-		}
-		fscanf(fd, "%d", &charge_full);
-		fclose(fd);
+		if (!freadint(CHARGE_FULL, &charge_full))
+			return -1.0;
 
 		return (((float) charge_now / (float) charge_full) * 100.0);
 	} else {
@@ -73,7 +73,7 @@ float getbattery(void)
 }
 
 /* Check for pm-action support. */
-unsigned int pm_supported(const char *pm_type)
+int pm_supported(const char *pm_type)
 {
 	int status;
 	pid_t child_pid;
@@ -107,8 +107,8 @@ void pm_action(const char *pm_cmd)
 	pid_t child_pid;
 	char pm_cmd_full[64];
 
-	strncpy(pm_cmd_full, PM_PREFIX, 64);
-	strncat(pm_cmd_full, pm_cmd, 64 - strlen(pm_cmd_full) - 1);
+	strncpy(pm_cmd_full,  PM_PREFIX,  64);
+	strncat(pm_cmd_full,  pm_cmd,     64 - strlen(pm_cmd_full) - 1);
 
 	fflush(NULL); /* Be sure everything is output before pm-action. */
 
@@ -151,23 +151,25 @@ int use_pm(char suspend_type)
 
 int main(int argc, const char *argv[])
 {
-	long long uptime = 0;
-	FILE *fd = NULL;
-	float cur_percent = 100.0; /* Default value while reading first time. */
-	float min_percent = 0.15; /* Float between 0.0 and 100.0 */
-	char suspend_type = 'd'; /* One of 'f', 's', 'm', or 'd'. */
-	char states[4][16]; /* There are 4 states, each less than 16 chars long:
-						   freeze, standby, mem, and disk. */
-	char state[16];
 	int num_states, usage, i, times_low, valid_state;
+	long long uptime  = 0;
+	FILE *fd          = NULL;
+	float cur_percent = 100.0; /* Default value while reading first time. */
+	float min_percent = 0.15;  /* Float between 0.0 and 100.0 */
+	char suspend_type = 'd';   /* One of 'f', 's', 'm', or 'd'. */
+	char state[16];
+	char states[4][16];        /* There are 4 states, each less than 16 chars
+								* long: freeze, standby, mem, and disk. */
 
 	num_states = usage = i = times_low = valid_state = 0;
 	memset(states, '\0', 64);
 
 	/* Open `/sys/power/state' for reading available suspend states. */
-	if (!(fd = fopen("/sys/power/state", "r"))) {
-		fprintf(stderr, "Could not read from `/sys/power/state'.\n");
+	if (access(STATE, R_OK) == -1) {
+		perror("main: Could not read from '" STATE "'.\n");
 		return 1;
+	} else {
+		fd = fopen(STATE, "r");
 	}
 
 	/* Get the states. */
@@ -176,8 +178,8 @@ int main(int argc, const char *argv[])
 	num_states--;
 
 	/* Check pm-is-supported for supported pm-suspend commands. */
-	pm_support.suspend = pm_supported("--suspend");
-	pm_support.hibernate = pm_supported("--hibernate");
+	pm_support.suspend        = pm_supported("--suspend");
+	pm_support.hibernate      = pm_supported("--hibernate");
 	pm_support.suspend_hybrid = pm_supported("--suspend-hybrid");
 
 	/* Validate arguments and permissions. */
@@ -196,8 +198,10 @@ int main(int argc, const char *argv[])
 		sscanf(argv[2], "%f", &min_percent);
 
 		/* Validate suspend_type. */
-		if (!(suspend_type == 'f' || suspend_type == 's'
-					|| suspend_type == 'm' || suspend_type == 'd')) {
+		if (!(suspend_type == 'f'
+					|| suspend_type == 's'
+					|| suspend_type == 'm'
+					|| suspend_type == 'd')) {
 			fprintf(stderr, "`%c' is not a recognized state.\n", suspend_type);
 			usage = 1;
 		}
@@ -212,8 +216,9 @@ int main(int argc, const char *argv[])
 
 	/* Print usage. */
 	if (usage) {
-		fprintf(stderr, "Usage: 3sm <suspend_type> <min_percent>\n");
-		fprintf(stderr, "\tsuspend_types: ");
+		fprintf(stderr,
+				"Usage: 3sm <suspend_type> <min_percent>\n"
+				"\tsuspend_types: ");
 		for (i = 0; i < num_states; i++)
 			fprintf(stderr, "%s%s", states[i],
 					((i < num_states - 1) ? ", " : ".\n"));
@@ -223,7 +228,8 @@ int main(int argc, const char *argv[])
 	}
 
 	/* Init info. */
-	fprintf(stderr, "RUNNING: Checks every %d seconds.\n"
+	fprintf(stderr,
+			"RUNNING 3SM: Checks every %d seconds.\n\n"
 			"Your system seems to be capable of %d states:\n",
 			CHECK_INTERVAL_USEC / 1000000, num_states);
 	for (i = 0; i < num_states; i++)
@@ -231,6 +237,7 @@ int main(int argc, const char *argv[])
 
 	if (pm_support.suspend || pm_support.hibernate || pm_support.suspend_hybrid) {
 		fprintf(stderr, "\nAnd pm-actions:\n");
+
 		if (pm_support.suspend)
 			fprintf(stderr, "\tpm-suspend\n");
 		if (pm_support.hibernate)
@@ -243,16 +250,16 @@ int main(int argc, const char *argv[])
 	/* Set state from arg char to valid state string. */
 	switch (suspend_type) {
 		case 'f':
-			strncpy(state, "freeze", 16);
+			strncpy(state,  "freeze",   16);
 			break;
 		case 's':
-			strncpy(state, "standby", 16);
+			strncpy(state,  "standby",  16);
 			break;
 		case 'm':
-			strncpy(state, "mem", 16);
+			strncpy(state,  "mem",      16);
 			break;
 		case 'd':
-			strncpy(state, "disk", 16);
+			strncpy(state,  "disk",     16);
 			break;
 		default: /* Should never happen. */
 			return 3;
@@ -265,16 +272,17 @@ int main(int argc, const char *argv[])
 			valid_state = 1;
 
 	if (!valid_state) {
-		fprintf(stderr, "The state %s is not supported on your system.\n",
-				state);
+		fprintf(stderr,
+				"The state %s is not supported on your system.\n", state);
 		return 4;
 	}
 
-	if (!(fd = freopen("/sys/power/state", "w", fd))) {
-		fprintf(stderr, "Need permissions to write to `/sys/power/state'.\n");
+	if (access(STATE, W_OK) == -1) {
+		perror("main: Cannot write to '" STATE "' (permissions?).\n");
 		return 2;
+	} else {
+		fd = freopen(STATE, "w", fd);
 	}
-
 
 	/* Get battery percentage for the first run of loop. */
 	cur_percent = getbattery();
@@ -282,7 +290,7 @@ int main(int argc, const char *argv[])
 	/* Start the monitoring and suspending loop. */
 	for (uptime = 0LL; uptime != -1LL; uptime++) { /* forever */
 		if (times_low < 3)
-			printf(" {uptime: about %lld seconds. battery: %f%%}   ",
+			printf(" [uptime: ~%llds] [bat: %f%%] : ",
 					uptime * (CHECK_INTERVAL_USEC / 1000000), cur_percent);
 
 		if ((cur_percent = getbattery()) <= min_percent) {
@@ -305,7 +313,7 @@ int main(int argc, const char *argv[])
 												use /sys/power/state method. */
 					if (fprintf(fd, state) != strlen(state)) {
 						fprintf(stderr, "\n\tferror(): %d\n", ferror(fd));
-						perror("\tFailed to suspend");
+						perror("main: Failed to suspend");
 					}
 					fflush(fd);
 				}

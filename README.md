@@ -3,6 +3,8 @@
 Used to change system state (often suspend) on low battery at a specified
 percentage.
 
+I use `gcc -Wall -Werror -pedantic -std=c99 -O2 3sm.c -o 3sm` to compile.
+
 ## Notes
 
 Requires root privileges to run.
