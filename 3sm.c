@@ -95,7 +95,7 @@ int pm_supported(const char *pm_type)
 				exit(0);
 		}
 	} else { /* fork() failed. */
-		perror("check for pm support fork");
+		perror("pm_supported: check for pm support fork() failed");
 		exit(5);
 	}
 }
@@ -121,7 +121,7 @@ void pm_action(const char *pm_cmd)
 			wait(&status);
 		}
 	} else { /* fork() failed. */
-		perror("pm action fork");
+		perror("pm_action fork failed");
 		exit(6);
 	}
 }
@@ -166,7 +166,7 @@ int main(int argc, const char *argv[])
 
 	/* Open `/sys/power/state' for reading available suspend states. */
 	if (access(STATE, R_OK) == -1) {
-		perror("main: Could not read from '" STATE "'.\n");
+		perror("main: Could not read from '" STATE "'");
 		return 1;
 	} else {
 		fd = fopen(STATE, "r");
@@ -278,7 +278,7 @@ int main(int argc, const char *argv[])
 	}
 
 	if (access(STATE, W_OK) == -1) {
-		perror("main: Cannot write to '" STATE "' (permissions?).\n");
+		perror("main: Cannot write to '" STATE "' (permissions?)");
 		return 2;
 	} else {
 		fd = freopen(STATE, "w", fd);
