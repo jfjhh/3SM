@@ -1,0 +1,58 @@
+.\" Process this file with
+.\" groff -man -Tascii chemtk.1
+.\"
+.TH 3SM 1 "MARCH 2015" Linux "User Manuals"
+.SH NAME
+3SM \- Simple System Suspend Manager
+.SH SYNOPSIS
+.B 3sm [
+.I mode
+.B ] [
+.I percentage
+.B ]
+.SH DESCRIPTION
+A simple utility that suspends the computer into
+.I mode
+if the battery percentage drops below
+.IR percentage .
+It must be run as root.
+.SH OPTIONS
+.TP
+.I mode
+One of
+.BR d , m , f , s
+for
+.BR disk , memory , freeze , standby
+respectively.
+.TP
+.I percentage
+Any percentage expressed as an integer between 1 and 99, though more logically
+something like 5 to 20, because it is the percentage at which the system will
+suspend at.
+.SH EXAMPLES
+.TP
+.B 3sm d 10
+.I Suspends to disk on 10% battery.
+.TP
+.B 3sm f 40 &> /dev/null &
+.I Freezes at 40%, and run as a daemon.
+.TP
+.B 3sm m 3.14
+.I Suspends to ram at pi%.
+.SH FILES
+.TP
+.I /sys/power/state
+When
+.BR read ,
+gives available states. When
+.BR written
+to, it sets state.
+.SH AUTHOR
+Alex Striff
+.I <alex.striff1@gmail.com>
+.SH "SEE ALSO"
+.BR pm-is-supported (1)
+.TP
+.B States documentation.
+.I <https://www.kernel.org/doc/Documentation/power/states.txt>
+
