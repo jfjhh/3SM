@@ -187,7 +187,7 @@ int main(int argc, const char *argv[])
 		/* Validate arguments. */
 		fprintf(stderr, "Not 2 arguments (got %d).\n", argc - 1);
 		usage = 1;
-	} else if (getuid() < 0 || getuid() != geteuid()) {
+	} else if (getuid() != (uid_t) 0 || getuid() != geteuid()) {
 		/* Check if being ran by root properly. */
 		fprintf(stderr, "Program must be ran as root.\n");
 		usage = 1;
@@ -311,7 +311,7 @@ int main(int argc, const char *argv[])
 				/* Suspend, and check if an error occured. */
 				if (!use_pm(suspend_type)) { /* If no pm-action,
 												use /sys/power/state method. */
-					if (fprintf(fd, state) != strlen(state)) {
+					if (fprintf(fd, state) != (int) strlen(state)) {
 						fprintf(stderr, "\n\tferror(): %d\n", ferror(fd));
 						perror("main: Failed to suspend");
 					}
