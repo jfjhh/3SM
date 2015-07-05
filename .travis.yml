@@ -1,0 +1,8 @@
+language: c
+
+script:
+  - autoreconf -i
+  - autoconf
+  - ./configure
+  - make
+

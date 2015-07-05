@@ -1,5 +1,7 @@
 # 3SM: Simple System Suspend Manager.
 
+![Build Status](https://travis-ci.org/jfjhh/3SM.svg?branch=master)
+
 Used to change system state (often suspend) on low battery at a specified
 percentage.
 
