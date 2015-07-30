@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <title>3sm by jfjhh</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>3sm</h1>
+        <h2>Simple System Suspend Manager</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/jfjhh/3SM/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/jfjhh/3SM/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/jfjhh/3SM" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a id="3sm-simple-system-suspend-manager" class="anchor" href="#3sm-simple-system-suspend-manager" aria-hidden="true"><span class="octicon octicon-link"></span></a>3SM: Simple System Suspend Manager.</h1>
+
+<p><img src="https://travis-ci.org/jfjhh/3SM.svg?branch=master" alt="Build Status"></p>
+
+<p>Used to change system state (often to suspend or hibernate) on low battery at a
+specified percentage.</p>
+
+<p>On my system, this program runs via an entry in root's
+<a href="http://linux.die.net/man/5/crontab"><code>crontab(5)</code></a> file:</p>
+
+<pre><code>@reboot /usr/bin/screen -dmS 3SM /usr/local/bin/3sm d 15
+</code></pre>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>You should be able to do a standard install with <code>./configure &amp;&amp; make &amp;&amp; make
+install</code>, but only after <code>configure</code>, <code>Makefile</code>, and others are created. You
+will first need to have the Autotools installed, and run <code>autoreconf -i</code>.</p>
+
+<h2>
+<a id="notes" class="anchor" href="#notes" aria-hidden="true"><span class="octicon octicon-link"></span></a>Notes</h2>
+
+<p>Requires root privileges to run.
+Either run <code>3sm &lt;args&gt;</code> as root or do <code>sudo 3sm &lt;args&gt;</code>.</p>
+
+<p>Available kernel sleep states are:</p>
+
+<ul>
+<li> 'f' =&gt; 'freeze'.</li>
+<li> 's' =&gt; 'standby'.</li>
+<li> 'm' =&gt; 'mem'.</li>
+<li> 'd' =&gt; 'disk'.</li>
+</ul>
+
+<p>However, some of these may not exist on your system. Find out what is available
+by issuing <code>cat /sys/power/state</code>. <code>3sm</code> will not allow an attempt to execute a
+state that does not exist.</p>
+
+<p>States are substituted with their
+<a href="http://linux.die.net/man/8/pm-action"><code>pm-action (8)</code></a>
+counterparts if they exist, instead of just the raw state change.</p>
+
+<p>Documentation on these modes can be found
+<a href="https://www.kernel.org/doc/Documentation/power/states.txt">here</a>.</p>
+
+<h2>
+<a id="examples" class="anchor" href="#examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Examples</h2>
+
+<pre><code># to suspend to disk on 10% battery.
+$ 3sm d 10
+
+# to freeze at 40%, and run as a daemon.
+$ 3sm f 40 &amp;&gt; /dev/null &amp;
+
+# suspend to ram at `pi`%.
+$ 3sm m 3.14
+</code></pre>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
