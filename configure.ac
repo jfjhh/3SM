@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([3SM], [0.0.1], [https://github.com/jfjhh/3SM/issues])
+AC_INIT([3SM], [1.0.1], [https://github.com/jfjhh/3SM/issues])
 AC_CONFIG_SRCDIR([3sm.c])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE

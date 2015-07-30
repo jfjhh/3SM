@@ -2,15 +2,24 @@
 
 ![Build Status](https://travis-ci.org/jfjhh/3SM.svg?branch=master)
 
-Used to change system state (often suspend) on low battery at a specified
-percentage.
+Used to change system state (often to suspend or hibernate) on low battery at a
+specified percentage.
 
-I use `gcc -Wall -Werror -pedantic -std=c99 -O2 3sm.c -o 3sm` to compile.
+On my system, this program runs via an entry in root's
+[`crontab(5)`](http://linux.die.net/man/5/crontab) file:
+
+    @reboot /usr/bin/screen -dmS 3SM /usr/local/bin/3sm d 15
+
+## Installation
+
+You should be able to do a standard install with `./configure && make && make
+install`, but only after `configure`, `Makefile`, and others are created. You
+will first need to have the Autotools installed, and run `autoreconf -i`.
 
 ## Notes
 
 Requires root privileges to run.
-Either run as root or prepend `./3sm ...` command with `sudo`.
+Either run `3sm <args>` as root or do `sudo 3sm <args>`.
 
 Available kernel sleep states are:
  *	'f' => 'freeze'.
@@ -32,11 +41,11 @@ Documentation on these modes can be found
 ## Examples
 
 	# to suspend to disk on 10% battery.
-	$ ./3sm d 10
+	$ 3sm d 10
 
 	# to freeze at 40%, and run as a daemon.
-	$ ./3sm f 40 &> /dev/null &
+	$ 3sm f 40 &> /dev/null &
 
 	# suspend to ram at `pi`%.
-	$ ./3sm m 3.14
+	$ 3sm m 3.14
 
