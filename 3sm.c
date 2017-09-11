@@ -1,6 +1,6 @@
-#ifndef _BSD_SOURCE
-#define _BSD_SOURCE
-#endif /* _BSD_SOURCE */
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif /* _DEFAULT_SOURCE */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,14 +11,15 @@
 #include <sys/wait.h>
 
 /* Time to wait between checking battery in microseconds. */
-#define CHECK_INTERVAL_USEC	4000000 /* 4 seconds */
+#define CHECK_INTERVAL_USEC	10000000 /* 10 seconds */
 
 /* Prefix of pm-action executables, found via `sudo which pm-suspend'
  * and battery/system files and prefixes. */
 
 #define BAT_PREFIX	"/sys/class/power_supply/"
-#define CHARGE_FULL	BAT_PREFIX "BAT1/charge_full"
-#define CHARGE_NOW	BAT_PREFIX "BAT1/charge_now"
+#define AC_ONLINE	BAT_PREFIX "AC/online"
+#define CHARGE_FULL	BAT_PREFIX "BAT0/charge_full"
+#define CHARGE_NOW	BAT_PREFIX "BAT0/charge_now"
 #define ENERGY_FULL	BAT_PREFIX "BAT0/energy_full"
 #define ENERGY_NOW	BAT_PREFIX "BAT0/energy_now"
 #define VOLTAGE_NOW	BAT_PREFIX "BAT0/voltage_now"
@@ -70,6 +71,14 @@ float getbattery(void)
 	} else {
 		return -1.0;
 	}
+}
+
+/* Check if AC is online (the laptop is plugged in). */
+float getac(void)
+{
+	int online;
+	freadint(AC_ONLINE, &online);
+	return online == 1;
 }
 
 /* Check for pm-action support. */
@@ -293,7 +302,9 @@ int main(int argc, const char *argv[])
 			printf(" [uptime: ~%llds] [bat: %f%%] : ",
 					uptime * (CHECK_INTERVAL_USEC / 1000000), cur_percent);
 
-		if ((cur_percent = getbattery()) <= min_percent) {
+		if (getac()) {
+			printf("AC is online.\r");
+		} else if ((cur_percent = getbattery()) <= min_percent) {
 			if (times_low > 0) { /* Suspending is not working. */
 				if (times_low == 3) {
 					printf("Stopping output until reboot, "
