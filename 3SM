@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+name="3SM Daemon"
+description="3SM suspends or hibernates the system on low battery"
+
+start() {
+	ebegin "Starting 3SM"
+	start-stop-daemon --start --exec /usr/local/bin/3sm --background -- d 15
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping 3SM"
+	start-stop-daemon --stop --name 3sm
+	eend $?
+}
+
